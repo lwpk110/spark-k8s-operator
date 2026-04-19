@@ -134,10 +134,10 @@ func (h *SparkHistoryServerRoleGroupHandler) BuildResources(
 	metricsService := NewRoleGroupService(buildCtx.ClusterName, buildCtx.RoleGroupName, buildCtx.ClusterNamespace, labels)
 
 	return &reconciler.RoleGroupResources{
-		ConfigMap:        cm,
-		StatefulSet:      sts,
-		HeadlessService:  headlessService,
-		Service:          service,
-		MetricsService:   metricsService,
+		ConfigMap:       cm,
+		StatefulSet:     sts,
+		HeadlessService: headlessService,
+		Service:         service,
+		MetricsService:  metricsService,
 	}, nil
 }

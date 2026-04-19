@@ -1,20 +1,20 @@
 package historyserver
 
 import (
-"strconv"
+	"strconv"
 
-"github.com/zncdatadev/operator-go/pkg/builder"
-corev1 "k8s.io/api/core/v1"
+	"github.com/zncdatadev/operator-go/pkg/builder"
+	corev1 "k8s.io/api/core/v1"
 
-"github.com/zncdatadev/spark-k8s-operator/internal/util"
+	"github.com/zncdatadev/spark-k8s-operator/internal/util"
 )
 
 // NewRoleGroupService creates a metrics service using the new fluent builder API.
 func NewRoleGroupService(
-clusterName string,
-roleGroupName string,
-namespace string,
-labels map[string]string,
+	clusterName string,
+	roleGroupName string,
+	namespace string,
+	labels map[string]string,
 ) *corev1.Service {
 	metricsPort := util.GetMetricsPort()
 	serviceName := clusterName + "-" + roleGroupName + "-metrics"
@@ -44,10 +44,10 @@ labels map[string]string,
 
 // NewRoleGroupHeadlessService creates a headless service for StatefulSet network identity.
 func NewRoleGroupHeadlessService(
-name string,
-namespace string,
-labels map[string]string,
-ports []corev1.ContainerPort,
+	name string,
+	namespace string,
+	labels map[string]string,
+	ports []corev1.ContainerPort,
 ) *corev1.Service {
 	svcBuilder := builder.NewServiceBuilder(name+"-headless", namespace).
 		WithLabels(labels).
@@ -63,10 +63,10 @@ ports []corev1.ContainerPort,
 
 // NewRoleGroupClientService creates a ClusterIP service for client access.
 func NewRoleGroupClientService(
-name string,
-namespace string,
-labels map[string]string,
-ports []corev1.ContainerPort,
+	name string,
+	namespace string,
+	labels map[string]string,
+	ports []corev1.ContainerPort,
 ) *corev1.Service {
 	svcBuilder := builder.NewServiceBuilder(name, namespace).
 		WithLabels(labels).

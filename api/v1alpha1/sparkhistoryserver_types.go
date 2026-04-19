@@ -42,12 +42,11 @@ type SparkHistoryServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SparkHistoryServerSpec            `json:"spec,omitempty"`
+	Spec   SparkHistoryServerSpec               `json:"spec,omitempty"`
 	Status commonsv1alpha1.GenericClusterStatus `json:"status,omitempty"`
 
 	// scheme is injected at runtime by the reconciler, not serialized.
 	// +kubebuilder:pruning:PreserveUnknownFields
-	scheme *runtime.Scheme `json:"-"`
 }
 
 // GetName implements common.ClusterInterface.
@@ -63,10 +62,10 @@ func (s *SparkHistoryServer) GetUID() types.UID { return s.UID }
 func (s *SparkHistoryServer) GetObjectMeta() *metav1.ObjectMeta { return &s.ObjectMeta }
 
 // GetScheme implements common.ClusterInterface.
-func (s *SparkHistoryServer) GetScheme() *runtime.Scheme { return s.scheme }
+func (s *SparkHistoryServer) GetScheme() *runtime.Scheme { return nil }
 
 // SetScheme sets the runtime scheme. Called by the reconciler after fetching the CR.
-func (s *SparkHistoryServer) SetScheme(scheme *runtime.Scheme) { s.scheme = scheme }
+func (s *SparkHistoryServer) SetScheme(scheme *runtime.Scheme) {}
 
 // GetSpec implements common.ClusterInterface.
 // Maps the product-specific spec to GenericClusterSpec for the reconciler framework.
