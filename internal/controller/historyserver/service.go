@@ -1,72 +1,80 @@
 package historyserver
 
 import (
-	"strconv"
+"strconv"
 
-	"github.com/zncdatadev/operator-go/pkg/builder"
-	"github.com/zncdatadev/operator-go/pkg/client"
-	opconstants "github.com/zncdatadev/operator-go/pkg/constants"
-	"github.com/zncdatadev/operator-go/pkg/reconciler"
-	"github.com/zncdatadev/spark-k8s-operator/internal/util"
-	corev1 "k8s.io/api/core/v1"
+"github.com/zncdatadev/operator-go/pkg/builder"
+corev1 "k8s.io/api/core/v1"
+
+"github.com/zncdatadev/spark-k8s-operator/internal/util"
 )
 
-// NewRoleGroupMetricsService creates a metrics service reconciler using a simple function approach
-// This creates a headless service for metrics with Prometheus labels and annotations
-func NewRoleGroupMetricsService(
-	client *client.Client,
-	roleGroupInfo *reconciler.RoleGroupInfo,
-) reconciler.Reconciler {
-	// Get metrics port
+// NewRoleGroupService creates a metrics service using the new fluent builder API.
+func NewRoleGroupService(
+clusterName string,
+roleGroupName string,
+namespace string,
+labels map[string]string,
+) *corev1.Service {
 	metricsPort := util.GetMetricsPort()
-
-	// Create service ports
-	servicePorts := []corev1.ContainerPort{
-		{
-			Name:          util.HttpPortName,
-			ContainerPort: metricsPort,
-			Protocol:      corev1.ProtocolTCP,
-		},
-	}
-
-	// Create service name with -metrics suffix
-	serviceName := util.GetMetricsServiceName(roleGroupInfo)
-
-	// Determine scheme based on TLS configuration
+	serviceName := clusterName + "-" + roleGroupName + "-metrics"
 	scheme := "http"
-	// Prepare labels (copy from roleGroupInfo and add metrics labels)
-	labels := make(map[string]string)
-	for k, v := range roleGroupInfo.GetLabels() {
-		labels[k] = v
+
+	svcLabels := make(map[string]string)
+	for k, v := range labels {
+		svcLabels[k] = v
 	}
-	labels["prometheus.io/scrape"] = "true"
+	svcLabels["prometheus.io/scrape"] = "true"
 
-	// Prepare annotations (copy from roleGroupInfo and add Prometheus annotations)
-	annotations := make(map[string]string)
-	for k, v := range roleGroupInfo.GetAnnotations() {
-		annotations[k] = v
+	annotations := map[string]string{
+		"prometheus.io/scrape": "true",
+		"prometheus.io/path":   "/prom",
+		"prometheus.io/port":   strconv.Itoa(int(metricsPort)),
+		"prometheus.io/scheme": scheme,
 	}
-	annotations["prometheus.io/scrape"] = "true"
-	annotations["prometheus.io/path"] = "/prom"
-	annotations["prometheus.io/port"] = strconv.Itoa(int(metricsPort))
-	annotations["prometheus.io/scheme"] = scheme
 
-	// Create base service builder
-	baseBuilder := builder.NewServiceBuilder(
-		client,
-		serviceName,
-		servicePorts,
-		func(sbo *builder.ServiceBuilderOptions) {
-			sbo.Headless = true
-			sbo.ListenerClass = opconstants.ClusterInternal
-			sbo.Labels = labels
-			sbo.MatchingLabels = roleGroupInfo.GetLabels() // Use original labels for matching
-			sbo.Annotations = annotations
-		},
-	)
+	return builder.NewServiceBuilder(serviceName, namespace).
+		WithLabels(svcLabels).
+		WithAnnotations(annotations).
+		WithSelector(labels).
+		WithServiceType(builder.ServiceTypeHeadless).
+		AddPortSimple(util.HttpPortName, metricsPort, corev1.ProtocolTCP).
+		Build()
+}
 
-	return reconciler.NewGenericResourceReconciler(
-		client,
-		baseBuilder,
-	)
+// NewRoleGroupHeadlessService creates a headless service for StatefulSet network identity.
+func NewRoleGroupHeadlessService(
+name string,
+namespace string,
+labels map[string]string,
+ports []corev1.ContainerPort,
+) *corev1.Service {
+	svcBuilder := builder.NewServiceBuilder(name+"-headless", namespace).
+		WithLabels(labels).
+		WithSelector(labels).
+		WithServiceType(builder.ServiceTypeHeadless)
+
+	for _, p := range ports {
+		svcBuilder.AddPortSimple(p.Name, p.ContainerPort, p.Protocol)
+	}
+
+	return svcBuilder.Build()
+}
+
+// NewRoleGroupClientService creates a ClusterIP service for client access.
+func NewRoleGroupClientService(
+name string,
+namespace string,
+labels map[string]string,
+ports []corev1.ContainerPort,
+) *corev1.Service {
+	svcBuilder := builder.NewServiceBuilder(name, namespace).
+		WithLabels(labels).
+		WithSelector(labels)
+
+	for _, p := range ports {
+		svcBuilder.AddPortSimple(p.Name, p.ContainerPort, p.Protocol)
+	}
+
+	return svcBuilder.Build()
 }

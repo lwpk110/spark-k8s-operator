@@ -19,9 +19,11 @@ package v1alpha1
 import (
 	commonsv1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/commons/v1alpha1"
 	s3v1alpha1 "github.com/zncdatadev/operator-go/pkg/apis/s3/v1alpha1"
-	"github.com/zncdatadev/operator-go/pkg/status"
+	"github.com/zncdatadev/operator-go/pkg/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -40,9 +42,81 @@ type SparkHistoryServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SparkHistoryServerSpec `json:"spec,omitempty"`
-	Status status.Status          `json:"status,omitempty"`
+	Spec   SparkHistoryServerSpec            `json:"spec,omitempty"`
+	Status commonsv1alpha1.GenericClusterStatus `json:"status,omitempty"`
+
+	// scheme is injected at runtime by the reconciler, not serialized.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	scheme *runtime.Scheme `json:"-"`
 }
+
+// GetName implements common.ClusterInterface.
+func (s *SparkHistoryServer) GetName() string { return s.Name }
+
+// GetNamespace implements common.ClusterInterface.
+func (s *SparkHistoryServer) GetNamespace() string { return s.Namespace }
+
+// GetUID implements common.ClusterInterface.
+func (s *SparkHistoryServer) GetUID() types.UID { return s.UID }
+
+// GetObjectMeta implements common.ClusterInterface.
+func (s *SparkHistoryServer) GetObjectMeta() *metav1.ObjectMeta { return &s.ObjectMeta }
+
+// GetScheme implements common.ClusterInterface.
+func (s *SparkHistoryServer) GetScheme() *runtime.Scheme { return s.scheme }
+
+// SetScheme sets the runtime scheme. Called by the reconciler after fetching the CR.
+func (s *SparkHistoryServer) SetScheme(scheme *runtime.Scheme) { s.scheme = scheme }
+
+// GetSpec implements common.ClusterInterface.
+// Maps the product-specific spec to GenericClusterSpec for the reconciler framework.
+func (s *SparkHistoryServer) GetSpec() *commonsv1alpha1.GenericClusterSpec {
+	nodeRole := commonsv1alpha1.RoleSpec{
+		RoleGroups: make(map[string]commonsv1alpha1.RoleGroupSpec),
+	}
+	if s.Spec.Node != nil {
+		for name, rg := range s.Spec.Node.RoleGroups {
+			rgSpec := commonsv1alpha1.RoleGroupSpec{}
+			if rg != nil {
+				rgSpec.Replicas = rg.Replicas
+				rgSpec.ConfigOverrides = rg.ConfigOverrides
+				rgSpec.EnvOverrides = rg.EnvOverrides
+				rgSpec.CliOverrides = rg.CliOverrides
+				rgSpec.PodOverrides = rg.PodOverrides
+			}
+			nodeRole.RoleGroups[name] = rgSpec
+		}
+		nodeRole.ConfigOverrides = s.Spec.Node.ConfigOverrides
+		nodeRole.EnvOverrides = s.Spec.Node.EnvOverrides
+		nodeRole.CliOverrides = s.Spec.Node.CliOverrides
+		nodeRole.PodOverrides = s.Spec.Node.PodOverrides
+	}
+	return &commonsv1alpha1.GenericClusterSpec{
+		ClusterOperation: s.Spec.ClusterOperation,
+		Roles: map[string]commonsv1alpha1.RoleSpec{
+			"node": nodeRole,
+		},
+	}
+}
+
+// GetStatus implements common.ClusterInterface.
+func (s *SparkHistoryServer) GetStatus() *commonsv1alpha1.GenericClusterStatus { return &s.Status }
+
+// SetStatus implements common.ClusterInterface.
+func (s *SparkHistoryServer) SetStatus(status *commonsv1alpha1.GenericClusterStatus) {
+	s.Status = *status
+}
+
+// DeepCopyCluster implements common.ClusterInterface.
+func (s *SparkHistoryServer) DeepCopyCluster() common.ClusterInterface {
+	if s == nil {
+		return &SparkHistoryServer{}
+	}
+	return s.DeepCopy()
+}
+
+// GetRuntimeObject implements common.ClusterInterface.
+func (s *SparkHistoryServer) GetRuntimeObject() runtime.Object { return s }
 
 // +kubebuilder:object:root=true
 

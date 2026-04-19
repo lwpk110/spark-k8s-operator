@@ -1,7 +1,5 @@
 package util
 
-import "github.com/zncdatadev/operator-go/pkg/reconciler"
-
 const (
 	HttpPortName = "http"
 	GrpcPortName = "grpc"
@@ -16,6 +14,7 @@ func GetMetricsPort() int32 {
 	return HttpPort
 }
 
-func GetMetricsServiceName(roleGroupInfo *reconciler.RoleGroupInfo) string {
-	return roleGroupInfo.GetFullName() + "-metrics"
+// GetMetricsServiceNameForGroup returns the metrics service name for a given cluster and role group.
+func GetMetricsServiceNameForGroup(clusterName, roleGroupName string) string {
+	return clusterName + "-" + roleGroupName + "-metrics"
 }
